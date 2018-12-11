@@ -1,0 +1,48 @@
+{
+  "name": "integrity-connector-prodio",
+  "version": "0.0.10",
+  "description": "Adapter for consuming integrity API's",
+  "main": "lib/index.js",
+  "scripts": {
+    "build": ". scripts/build.sh",
+    "lint": "eslint --ext .js .",
+    "lintfix": "eslint --fix --ext .js .",
+    "prepublishOnly": "npm run build"
+  },
+  "pre-commit": {
+    "colors": true,
+    "run": [
+      "lint",
+      "test"
+    ],
+    "silent": false
+  },
+  "keywords": [
+    "integrity",
+    "integrity+adapter",
+    "integrity+connector"
+  ],
+  "devDependencies": {
+    "babel-cli": "^6.26.0",
+    "babel-core": "^6.26.3",
+    "babel-eslint": "^10.0.1",
+    "babel-preset-es2015": "^6.24.1",
+    "babel-preset-stage-1": "^6.24.1",
+    "babel-register": "^6.26.0",
+    "eslint": "^5.7.0",
+    "eslint-config-airbnb-base": "^13.1.0",
+    "eslint-plugin-import": "^2.14.0",
+    "eslint-plugin-security": "^1.4.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ProdioDesignWorks/integrity-connector-prodio.git"
+  },
+  "author": "Pawan Wagh <pawan@prodio.in> (http://prodio.in/)",
+  "license": "ISC",
+  "dependencies": {
+    "axios": "^0.18.0",
+    "user": "0.0.0",
+    "uuid": "^3.3.2"
+  }
+}
