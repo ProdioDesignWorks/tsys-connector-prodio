@@ -42,7 +42,10 @@
   "license": "ISC",
   "dependencies": {
     "axios": "^0.18.0",
+    "fast-xml-parser": "^3.12.10",
+    "he": "^1.2.0",
     "user": "0.0.0",
-    "uuid": "^3.3.2"
+    "uuid": "^3.3.2",
+    "xmljson": "^0.2.0"
   }
 }
