@@ -108,6 +108,11 @@ export default class TSYS {
       if (!isNull(payloadJson["meta"])) {
             payloadJson = payloadJson["meta"];
         }
+        if (!isNull(payloadJson["paymentInfo"])) {
+            payloadJson = payloadJson["paymentInfo"];
+        }
+        
+        console.log("payloadJson==>"+JSON.stringify(payloadJson));
 
       let xmls='<soap:Envelope xmlns:soap="http://www.w3.org/2003/05/soap-envelope">\
                  <soap:Body>\

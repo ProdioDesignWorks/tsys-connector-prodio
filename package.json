@@ -1,6 +1,6 @@
 {
   "name": "tsys-connector-prodio",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "description": "Adapter for consuming TSYS API's",
   "main": "lib/index.js",
   "scripts": {
