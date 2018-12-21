@@ -2,7 +2,22 @@ const uuidv4 = require('uuid/v4');
 const axios = require('axios');
 var parser = require('fast-xml-parser');
 var he = require('he');
+var JSParser = require("fast-xml-parser").j2xParser;
  
+ //default options need not to set
+var defaultOptions = {
+    attributeNamePrefix : "@_",
+    attrNodeName: "@", //default is false
+    textNodeName : "#text",
+    ignoreAttributes : true,
+    cdataTagName: "__cdata", //default is false
+    cdataPositionChar: "\\c",
+    format: false,
+    indentBy: "  ",
+    supressEmptyNode: false,
+    tagValueProcessor: a=> he.encode(a, { useNamedReferences: true}),// default is a=>a
+    attrValueProcessor: a=> he.encode(a, {isAttributeValue: isAttribute, useNamedReferences: true})// default is a=>a
+};
 var options = {
     attributeNamePrefix : "@_",
     attrNodeName: "attr", //default is 'false'
@@ -112,7 +127,7 @@ export default class TSYS {
             payloadJson = payloadJson["paymentInfo"];
         }
         
-        console.log("payloadJson==>"+JSON.stringify(payloadJson));
+        //console.log("payloadJson==>"+JSON.stringify(payloadJson));
 
       let xmls='<soap:Envelope xmlns:soap="http://www.w3.org/2003/05/soap-envelope">\
                  <soap:Body>\
@@ -149,95 +164,117 @@ export default class TSYS {
                  </soap:Body>\
               </soap:Envelope>';
 
+              console.log("xmls==>"+xmls);
+
         axios.post(MASTER_MERCHANT_ACCESS["PaymentEndPoint"],
            xmls,
            {headers:
              {'Content-Type': 'text/xml'}
            }).then(res=>{
-              if( parser.validate(res) === true) { //optional (it'll return an object in case it's not valid)
-                  var jsonObj = parser.parse(res,options);
+            //console.log(res["data"]);
+
+              let xmlResponse = res["data"];
+
+              if( parser.validate(xmlResponse) === true) { //optional (it'll return an object in case it's not valid)
+                  var jsonObj = parser.parse(xmlResponse,options);
               }
               
               // Intermediate obj
-              var tObj = parser.getTraversalObj(res,options);
+              var tObj = parser.getTraversalObj(xmlResponse,options);
               var jsonObj = parser.convertToJson(tObj,options);
               let SaleResponse = jsonObj["soap:Envelope"]["soap:Body"]["SaleResponse"];
+
               if(SaleResponse["SaleResult"]["ApprovalStatus"]=="APPROVED"){
-                resolve({"success":true,"body": jsonObj});
+                resolve({"success":true,"message": jsonObj});
               }else{
-                reject({"success":false,"error":SaleResponse["SaleResult"]["ApprovalStatus"]});
+                let _msg = SaleResponse["SaleResult"]["ApprovalStatus"];
+                if(isNull(_msg) || _msg==""){
+                  _msg = SaleResponse["SaleResult"]["ErrorMessage"];
+                }
+                reject({"success":false,"message":_msg});
               }
 
            }).catch(err=>{
-              reject({"success":false,"error":err});
+              reject({"success":false,"message":err});
           });
 
     });
   }
 
   makePayment(payloadJson){
+   
+  }
+
+  makeRefund(payloadJson){
     return new Promise((resolve, reject) => {
-      soap.createClient(MASTER_MERCHANT_ACCESS["TransactionsURL"], soap_client_options, function(err, client){
-        //  TODO : Here we have to use newly created merchant Info and not master info.
-          console.log(err);
-          console.log(client);
-         // var paymentJson = {
-         //          "Username":MASTER_MERCHANT_ACCESS["UserName"],
-         //          "Password":MASTER_MERCHANT_ACCESS["Password"],
-         //          "Vendor": MASTER_MERCHANT_ACCESS["Vendor"],
-         //          "CcInfoKey": payloadJson["cardInfo"]["gatewayCardId"],
-         //          "Amount": payloadJson["paymentInfo"]["totalAmount"],
-         //          "InvNum":payloadJson["paymentInfo"]["transactionId"], 
-         //          "ExtData":""
-         //        };
-         var paymentJson = {
-                  "Username":MASTER_MERCHANT_ACCESS["UserName"],
-                  "Password":MASTER_MERCHANT_ACCESS["Password"],
-                  "Vendor": MASTER_MERCHANT_ACCESS["Vendor"],
-                  "TransType":"Sale",
-                  "CardNum": payloadJson["cardInfo"]["cardNumber"],
-                  "ExpDate": payloadJson["cardInfo"]["expDate"],
-                  "MagData":"", 
-                  "NameOnCard": payloadJson["cardInfo"]["cardHolderName"] ,
-                  "Amount": payloadJson["paymentInfo"]["totalAmount"] ,
-                  "InvNum": payloadJson["paymentInfo"]["transactionId"],
-                  "PNRef":"",
-                  "Zip":"",
-                  "Street":"",
-                  "CVNum": payloadJson["cardInfo"]["cvv"] ,
-                  "ExtData":""
-                };
 
-                console.log(paymentJson);
+      if (!isNull(payloadJson["meta"])) {
+            payloadJson = payloadJson["meta"];
+        }
+        if (!isNull(payloadJson["paymentInfo"])) {
+            payloadJson = payloadJson["paymentInfo"];
+        }
+        
+        //console.log("payloadJson==>"+JSON.stringify(payloadJson));
+        let xmls = '<soap:Envelope xmlns:soap="http://www.w3.org/2003/05/soap-envelope">\
+                     <soap:Body>\
+                        <Refund xmlns="http://schemas.merchantwarehouse.com/merchantware/v45/">\
+                           <Credentials>\
+                              <MerchantName>'+masterCredentials["MERCHANT_NAME"]+'</MerchantName>\
+                              <MerchantSiteId>'+masterCredentials["MERCHANT_SITE_ID"]+'</MerchantSiteId>\
+                              <MerchantKey>'+masterCredentials["MERCHANT_KEY"]+'</MerchantKey>\
+                           </Credentials>\
+                           <PaymentData>\
+                              <Source>Keyed</Source>\
+                              <CardNumber>'+payloadJson["cardInfo"]["cardNumber"]+'</CardNumber>\
+                              <ExpirationDate>'+payloadJson["cardInfo"]["expirationDate"]+'</ExpirationDate>\
+                              <CardHolder>'+payloadJson["cardInfo"]["cardHolderName"]+'</CardHolder>\
+                           </PaymentData>\
+                           <Request>\
+                              <Amount>'+payloadJson["amount"]+'</Amount>\
+                              <InvoiceNumber></InvoiceNumber>\
+                              <RegisterNumber></RegisterNumber>\
+                              <MerchantTransactionId></MerchantTransactionId>\
+                              <CardAcceptorTerminalId></CardAcceptorTerminalId>\
+                           </Request>\
+                        </Refund>\
+                     </soap:Body>\
+                  </soap:Envelope>';
 
-          try{
+              console.log("xmls==>"+xmls);
 
-              client.ProcessCreditCard(paymentJson, function(err, result, body) {
-                  console.log(JSON.stringify(result)+":::"+result["ProcessCreditCardResult"]["Result"]);
-                  if(result && typeof result["ProcessCreditCardResult"] !== undefined && typeof result["ProcessCreditCardResult"]["Result"] !== undefined ){
-                      if(result["ProcessCreditCardResult"]["Result"]=="0"){
-                        resolve({
-                          "success":true,
-                          "body": {"gatewayTransactionId": result["ProcessCreditCardResult"]["PNRef"] },
-                        });
-                      }else{
-                        let _msg = "";
-                        if(!isNull(result["ProcessCreditCardResult"]["Message"])){
-                          _msg = result["ProcessCreditCardResult"]["Message"];
-                        }else{
-                          _msg = result["ProcessCreditCardResult"]["RespMSG"];
-                        }
-                        reject({ "success":false,  "message": _msg });
-                      }
-                      
-                  }else{
-                    reject({ "success":false,  "message": err });
-                  }
-              });
-          }catch(err){
-             reject({ "success":false,  "message": err });
-          }
-      });
+        axios.post(MASTER_MERCHANT_ACCESS["PaymentEndPoint"],
+           xmls,
+           {headers:
+             {'Content-Type': 'text/xml'}
+           }).then(res=>{
+            //console.log(res["data"]);
+
+              let xmlResponse = res["data"];
+
+              if( parser.validate(xmlResponse) === true) { //optional (it'll return an object in case it's not valid)
+                  var jsonObj = parser.parse(xmlResponse,options);
+              }
+              
+              // Intermediate obj
+              var tObj = parser.getTraversalObj(xmlResponse,options);
+              var jsonObj = parser.convertToJson(tObj,options);
+              let SaleResponse = jsonObj["soap:Envelope"]["soap:Body"]["RefundResponse"];
+
+              if(SaleResponse["RefundResult"]["ApprovalStatus"]=="APPROVED"){
+                resolve({"success":true,"message": jsonObj});
+              }else{
+                let _msg = SaleResponse["RefundResult"]["ApprovalStatus"];
+                if(isNull(_msg) || _msg==""){
+                  _msg = SaleResponse["RefundResult"]["ErrorMessage"];
+                }
+                reject({"success":false,"message":_msg});
+              }
+
+           }).catch(err=>{
+              reject({"success":false,"message":err});
+          });
+
     });
   }
 
