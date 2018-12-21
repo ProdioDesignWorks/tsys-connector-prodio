@@ -1,7 +1,7 @@
 {
-  "name": "integrity-connector-prodio",
-  "version": "0.0.10",
-  "description": "Adapter for consuming integrity API's",
+  "name": "tsys-connector-prodio",
+  "version": "0.0.4",
+  "description": "Adapter for consuming TSYS API's",
   "main": "lib/index.js",
   "scripts": {
     "build": ". scripts/build.sh",
@@ -18,9 +18,9 @@
     "silent": false
   },
   "keywords": [
-    "integrity",
-    "integrity+adapter",
-    "integrity+connector"
+    "tsys",
+    "tsys+adapter",
+    "tsys+connector"
   ],
   "devDependencies": {
     "babel-cli": "^6.26.0",
@@ -36,13 +36,16 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/ProdioDesignWorks/integrity-connector-prodio.git"
+    "url": "https://github.com/ProdioDesignWorks/tsys-connector-prodio.git"
   },
-  "author": "Pawan Wagh <pawan@prodio.in> (http://prodio.in/)",
+  "author": "Shashikant Sharma <shashikant@prodio.in> (http://prodio.in/)",
   "license": "ISC",
   "dependencies": {
     "axios": "^0.18.0",
+    "fast-xml-parser": "^3.12.10",
+    "he": "^1.2.0",
     "user": "0.0.0",
-    "uuid": "^3.3.2"
+    "uuid": "^3.3.2",
+    "xmljson": "^0.2.0"
   }
 }

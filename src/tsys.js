@@ -1,10 +1,29 @@
 const uuidv4 = require('uuid/v4');
 const axios = require('axios');
-const soap = require('soap');
-const parseString = require('xml2js').parseString;
-let soap_client_options = {};
+var parser = require('fast-xml-parser');
+var he = require('he');
+ 
+var options = {
+    attributeNamePrefix : "@_",
+    attrNodeName: "attr", //default is 'false'
+    textNodeName : "#text",
+    ignoreAttributes : true,
+    ignoreNameSpace : false,
+    allowBooleanAttributes : false,
+    parseNodeValue : true,
+    parseAttributeValue : false,
+    trimValues: true,
+    cdataTagName: "__cdata", //default is 'false'
+    cdataPositionChar: "\\c",
+    localeRange: "", //To support non english character in tag/attribute values.
+    parseTrueNumberOnly: false,
+    attrValueProcessor: a => he.decode(a, {isAttributeValue: true}),//default is a=>a
+    tagValueProcessor : a => he.decode(a) //default is a=>a
+};
+
 
 const { MASTER_MERCHANT_ACCESS} = require('./config/constant.js');
+
 const isNull = function (val) {
   if (typeof val === 'string') { val = val.trim(); }
   if (val === undefined || val === null || typeof val === 'undefined' || val === '' || val === 'undefined') {
@@ -13,108 +32,34 @@ const isNull = function (val) {
   return false;
 };
 
-export default class Integrity {
+
+let masterCredentials = {};
+
+export default class TSYS {
   constructor(config) {
     this.config = config;
+    masterCredentials["MERCHANT_NAME"] = this.config.MERCHANT_NAME;
+    masterCredentials["MERCHANT_SITE_ID"] = this.config.MERCHANT_SITE_ID;
+    masterCredentials["MERCHANT_KEY"] = this.config.MERCHANT_KEY;
+        
+    // let rootDir = process.mainModule.paths[0].split('server')[0].slice(0, -1);
+    // let  = require(rootDir + '/services/paymentsources.json');
   }
 
   createMerchant(payloadJson){
     return new Promise((resolve, reject) => {
-      let payload = {
-        username: MASTER_MERCHANT_ACCESS["BoardingAPIsUserName"],
-        password: MASTER_MERCHANT_ACCESS["BoardingAPIsPassword"],
-      };
 
-      axios.post(MASTER_MERCHANT_ACCESS["BoardingAuthAPIURL"], payload).then(response => {
-        //console.log(" \n \n res==>"+JSON.stringify(response["data"]));
-        if(!isNull(response["responseStatus"])){
-          return reject({
-            "success": false,
-            "message": response["responseStatus"]["message"],
-            "error": response["responseStatus"]["errorCode"],
-          });
-        }else{
-          //console.log(" \n \n reads==>"+JSON.stringify(response["data"]));
-          
-          let bearerToken = response["data"]["bearerToken"];
-          var config = {
-            headers: {
-              'Content-Type':'application/json',
-              'Authorization': "bearer " + bearerToken
-            }
-          };
+      resolve({ "success":true, "body": {"merchant":{"mid": uuidv4() }} });
 
-          let createMerchantJson = {
-              "DoingBusinessAs": payloadJson["business"]["businessName"],
-              "LegalBusinessName": payloadJson["business"]["dbaName"],
-              "LegalBusinessAddress": {
-                "AddressLine1": payloadJson["business"]["address"]["streetAddress"],
-                "City": payloadJson["business"]["address"]["city"],
-                "Zip": payloadJson["business"]["address"]["zipCode"],
-                "State": payloadJson["business"]["address"]["state"]
-              },
-              "DbaAddress": {
-                "AddressLine1": payloadJson["business"]["address"]["streetAddress"],
-                "City": payloadJson["business"]["address"]["city"],
-                "Zip": payloadJson["business"]["address"]["zipCode"],
-                "State": payloadJson["business"]["address"]["state"]
-              },
-              "OwnerContacts": [
-                 {
-                    "firstName": payloadJson["basic"]["firstName"],
-                    "lastName": payloadJson["basic"]["lastName"],
-                    "email":payloadJson["basic"]["email"],
-                    "phone": payloadJson["basic"]["mobileNumber"],
-                    "address": {
-                      "addressLine1": payloadJson["business"]["address"]["streetAddress"],
-                      "city": payloadJson["business"]["address"]["city"],
-                      "zip": payloadJson["business"]["address"]["zipCode"],
-                      "state": payloadJson["business"]["address"]["state"]
-                    },
-                    "equityPercentage": 100,
-                    "isPrimaryContact": true,
-                    "SSN": payloadJson["basic"]["ssn"]
-                  }
-              ],
-              "BankAccount": {
-                "NameOnAccount": (!isNull(payloadJson["basic"]["accountName"]))?payloadJson["basic"]["accountName"]:payloadJson["basic"]["firstName"],
-                "RoutingNumber": (!isNull(payloadJson["billing"]["routingNumber"]))?payloadJson["billing"]["routingNumber"]:"",
-                "AccountNumber": (!isNull(payloadJson["billing"]["accountNumber"]))?payloadJson["billing"]["accountNumber"]:""
-              },
-              "FedTaxId": (!isNull(payloadJson["billing"]["fedTaxId"]))?payloadJson["billing"]["fedTaxId"]:""
-          };
-
-          axios.post(MASTER_MERCHANT_ACCESS["BoardingCreateMerchantURL"], createMerchantJson,config).then(
-            merchantResponse => resolve({
-                "success":true,
-                "KEY":"!11",
-                "body": merchantResponse["data"],
-              })
-            ).catch(
-              error => reject({
-                "success":false, 
-                "KEY":"222",
-                "message": error["response"]["data"]["responseStatus"]["message"]
-              })
-            );
-        }
-      })
-      // }).catch(
-      //   error => reject({
-      //     "success": false, 
-      //     "KEY":"333",
-      //     "message": JSON.stringify(error)
-      //   })
-      // );
     });
   }
 
   updateMerchant(payloadJson){
-  	return 'This is from Integrity';
+    return 'This is from Integrity';
   }
 
   deleteMerchant(payloadJson){
-  	return 'This is from Integrity';
+    return 'This is from Integrity';
   }
 
   getMerchantId(payloadJson){
@@ -123,53 +68,9 @@ export default class Integrity {
 
   getMerchantActionvationStatus(payloadJson){
     return new Promise((resolve, reject) => {
-      let payload = {
-        username: MASTER_MERCHANT_ACCESS["BoardingAPIsUserName"],
-        password: MASTER_MERCHANT_ACCESS["BoardingAPIsPassword"],
-      };
 
-      axios.post(MASTER_MERCHANT_ACCESS["BoardingAuthAPIURL"], payload).then(response => {
-        //console.log(" \n \n res==>"+JSON.stringify(response["data"]));
-        if(!isNull(response["responseStatus"])){
-          return reject({
-            "success": false,
-            "message": response["responseStatus"]["message"],
-            "error": response["responseStatus"]["errorCode"],
-          });
-        }else{
-          
-          let bearerToken = response["data"]["bearerToken"];
-          var config = {
-            headers: {
-              'Content-Type':'application/json',
-              'Authorization': "bearer " + bearerToken
-            }
-          };
+      resolve({ "success":true, "body": {"activationStatus":true} });
 
-          let BoardingMerchantStatusURL = MASTER_MERCHANT_ACCESS["BoardingMerchantStatusURL"];
-
-          BoardingMerchantStatusURL = BoardingMerchantStatusURL.replace("{{MERCHANT_ID}}",payloadJson["merchantId"]);
-
-          axios.get(BoardingMerchantStatusURL,config).then(
-            merchantResponse => resolve({
-                "success":true,
-                "body": merchantResponse["data"],
-              })
-            ).catch(
-              error => reject({
-                "success":false, 
-                "message": error["response"]["data"]["responseStatus"]["message"]
-              })
-            );
-        }
-      })
-      // }).catch(
-      //   error => reject({
-      //     "success": false, 
-      //     "KEY":"333",
-      //     "message": JSON.stringify(error)
-      //   })
-      // );
     });
   }
 
@@ -179,167 +80,99 @@ export default class Integrity {
 
   createPayer(payloadJson){
     return new Promise((resolve, reject) => {
-      soap.createClient(MASTER_MERCHANT_ACCESS["RecurringURL"], soap_client_options, function(err, client){
-        //  TODO : Here we have to use newly created merchant Info and not master info.
-         var createCustomerJson = {"Username":MASTER_MERCHANT_ACCESS["UserName"], 
-                  "Password":MASTER_MERCHANT_ACCESS["Password"],
-                  "TransType":"ADD",
-                  "Vendor": MASTER_MERCHANT_ACCESS["Vendor"],
-                  "CustomerKey":"",
-                  "CustomerID": payloadJson["payeeInfo"]["firstName"]+" "+payloadJson["payeeInfo"]["lastName"],
-                  "CustomerName":payloadJson["payeeInfo"]["firstName"]+" "+payloadJson["payeeInfo"]["lastName"],
-                  "FirstName": payloadJson["payeeInfo"]["firstName"],
-                  "LastName": payloadJson["payeeInfo"]["lastName"],
-                  "Title":"",
-                  "Department":"",
-                  "Street1":"",
-                  "Street2":"",
-                  "Street3":"",
-                  "City":"",
-                  "StateID":"",
-                  "Province":"",
-                  "Zip":"",
-                  "CountryID":"",
-                  "Email": payloadJson["payeeInfo"]["email"],
-                  "DayPhone":"",
-                  "NightPhone":"",
-                  "Fax":"",
-                  "Mobile":payloadJson["payeeInfo"]["mobileNumber"],
-                  "Status":"",
-                  "ExtData":""
-              };
-
-          // if(userInfo["integrityCustomerID"]=="" || userInfo["integrityCustomerID"]==null){
-
-          // }else{
-          //     createCustomerJson["CustomerKey"] = userInfo["integrityCustomerID"];
-          //     createCustomerJson["TransType"] = "UPDATE";
-          // }
-
-          try{
-              client.ManageCustomer(createCustomerJson, function(err, result, body) {
-                  //console.log(JSON.stringify(result)+":::"+result["ManageCustomerResult"]["CustomerKey"]);
-                  if(result && typeof result["ManageCustomerResult"] !== undefined && typeof result["ManageCustomerResult"]["CustomerKey"] !== undefined ){
-                      resolve({
-                        "success":true,
-                        "body": {"gatewayBuyerId": result["ManageCustomerResult"]["CustomerKey"] },
-                      });
-                  }else{
-                    reject({ "success":false,  "message": err });
-                  }
-              });
-          }catch(err){
-             reject({ "success":false,  "message": err });
-          }
-      });
+      resolve({ "success":true,"body": {"gatewayBuyerId": uuidv4() } });
     });
   }
 
   editPayer(payloadJson){
-    return new Promise((resolve, reject) => {
-      soap.createClient(MASTER_MERCHANT_ACCESS["RecurringURL"], soap_client_options, function(err, client){
-        //  TODO : Here we have to use newly created merchant Info and not master info.
-         var createCustomerJson = {"Username":MASTER_MERCHANT_ACCESS["UserName"], 
-                  "Password":MASTER_MERCHANT_ACCESS["Password"],
-                  "TransType":"UPDATE",
-                  "Vendor": MASTER_MERCHANT_ACCESS["Vendor"],
-                  "CustomerKey":payloadJson["payeeInfo"]["gatewayBuyerId"],
-                  "CustomerID": payloadJson["payeeInfo"]["firstName"]+" "+payloadJson["payeeInfo"]["lastName"],
-                  "CustomerName":payloadJson["payeeInfo"]["firstName"]+" "+payloadJson["payeeInfo"]["lastName"],
-                  "FirstName": payloadJson["payeeInfo"]["firstName"],
-                  "LastName": payloadJson["payeeInfo"]["lastName"],
-                  "Title":"",
-                  "Department":"",
-                  "Street1":"",
-                  "Street2":"",
-                  "Street3":"",
-                  "City":"",
-                  "StateID":"",
-                  "Province":"",
-                  "Zip":"",
-                  "CountryID":"",
-                  "Email": payloadJson["payeeInfo"]["email"],
-                  "DayPhone":"",
-                  "NightPhone":"",
-                  "Fax":"",
-                  "Mobile":payloadJson["payeeInfo"]["mobileNumber"],
-                  "Status":"",
-                  "ExtData":""
-              };
 
-          try{
-              client.ManageCustomer(createCustomerJson, function(err, result, body) {
-                  console.log(JSON.stringify(result)+":::"+result["ManageCustomerResult"]["CustomerKey"]);
-                  if(result && typeof result["ManageCustomerResult"] !== undefined && typeof result["ManageCustomerResult"]["CustomerKey"] !== undefined ){
-                      resolve({
-                        "success":true,
-                        "body": {"gatewayBuyerId": result["ManageCustomerResult"]["CustomerKey"] },
-                      });
-                  }else{
-                    reject({ "success":false,  "message": err });
-                  }
-              });
-          }catch(err){
-             reject({ "success":false,  "message": err });
-          }
-      });
+    return new Promise((resolve, reject) => {
+      resolve({ "success":true,"body": {"gatewayBuyerId":  payloadJson["payeeInfo"]["gatewayBuyerId"] } });
     });
   }
 
   removePayer(payloadJson){
     return new Promise((resolve, reject) => {
-      soap.createClient(MASTER_MERCHANT_ACCESS["RecurringURL"], soap_client_options, function(err, client){
-        //  TODO : Here we have to use newly created merchant Info and not master info.
-         var createCustomerJson = {"Username":MASTER_MERCHANT_ACCESS["UserName"], 
-                  "Password":MASTER_MERCHANT_ACCESS["Password"],
-                  "TransType":"DELETE",
-                  "Vendor": MASTER_MERCHANT_ACCESS["Vendor"],
-                  "CustomerKey":payloadJson["payeeInfo"]["gatewayBuyerId"],
-                  "CustomerID": payloadJson["payeeInfo"]["firstName"]+" "+payloadJson["payeeInfo"]["lastName"],
-                  "CustomerName":payloadJson["payeeInfo"]["firstName"]+" "+payloadJson["payeeInfo"]["lastName"],
-                  "FirstName": payloadJson["payeeInfo"]["firstName"],
-                  "LastName": payloadJson["payeeInfo"]["lastName"],
-                  "Title":"",
-                  "Department":"",
-                  "Street1":"",
-                  "Street2":"",
-                  "Street3":"",
-                  "City":"",
-                  "StateID":"",
-                  "Province":"",
-                  "Zip":"",
-                  "CountryID":"",
-                  "Email": payloadJson["payeeInfo"]["email"],
-                  "DayPhone":"",
-                  "NightPhone":"",
-                  "Fax":"",
-                  "Mobile":payloadJson["payeeInfo"]["mobileNumber"],
-                  "Status":"",
-                  "ExtData":""
-              };
-
-          try{
-              client.ManageCustomer(createCustomerJson, function(err, result, body) {
-                  console.log(JSON.stringify(result)+":::"+result["ManageCustomerResult"]["CustomerKey"]);
-                  if(result && typeof result["ManageCustomerResult"] !== undefined && typeof result["ManageCustomerResult"]["CustomerKey"] !== undefined ){
-                      resolve({
-                        "success":true,
-                        "body": {"gatewayBuyerId": result["ManageCustomerResult"]["CustomerKey"] },
-                      });
-                  }else{
-                    reject({ "success":false,  "message": err });
-                  }
-              });
-          }catch(err){
-             reject({ "success":false,  "message": err });
-          }
-      });
+      resolve({ "success":true,"body": {"gatewayBuyerId":  payloadJson["payeeInfo"]["gatewayBuyerId"] } });
     });
   }
 
 
   bulkUploadPayers(payloadJson){
     return 'this is test';
+  }
+
+  makeDirectPayment(payloadJson){
+    return new Promise((resolve, reject) => {
+
+      if (!isNull(payloadJson["meta"])) {
+            payloadJson = payloadJson["meta"];
+        }
+        if (!isNull(payloadJson["paymentInfo"])) {
+            payloadJson = payloadJson["paymentInfo"];
+        }
+        
+        console.log("payloadJson==>"+JSON.stringify(payloadJson));
+
+      let xmls='<soap:Envelope xmlns:soap="http://www.w3.org/2003/05/soap-envelope">\
+                 <soap:Body>\
+                    <Sale xmlns="http://schemas.merchantwarehouse.com/merchantware/v45/">\
+                       <Credentials>\
+                          <MerchantName>'+masterCredentials["MERCHANT_NAME"]+'</MerchantName>\
+                          <MerchantSiteId>'+masterCredentials["MERCHANT_SITE_ID"]+'</MerchantSiteId>\
+                          <MerchantKey>'+masterCredentials["MERCHANT_KEY"]+'</MerchantKey>\
+                       </Credentials>\
+                       <PaymentData>\
+                          <Source>Keyed</Source>\
+                          <CardNumber>'+payloadJson["cardInfo"]["cardNumber"]+'</CardNumber>\
+                          <ExpirationDate>'+payloadJson["cardInfo"]["expirationDate"]+'</ExpirationDate>\
+                          <CardHolder>'+payloadJson["cardInfo"]["cardHolderName"]+'</CardHolder>\
+                          <AvsStreetAddress>'+payloadJson["cardInfo"]["street"]+'</AvsStreetAddress>\
+                          <AvsZipCode>'+payloadJson["cardInfo"]["zip"]+'</AvsZipCode>\
+                          <CardVerificationValue>'+payloadJson["cardInfo"]["cvv"]+'</CardVerificationValue>\
+                        </PaymentData>\
+                       <Request>\
+                          <Amount>'+payloadJson["paymentInfo"]["amount"]+'</Amount>\
+                          <CashbackAmount>0.00</CashbackAmount>\
+                          <SurchargeAmount>0.00</SurchargeAmount>\
+                          <TaxAmount>'+payloadJson["paymentInfo"]["taxAmount"]+'</TaxAmount>\
+                          <InvoiceNumber>'+payloadJson["paymentInfo"]["invoiceNumber"]+'</InvoiceNumber>\
+                          <PurchaseOrderNumber></PurchaseOrderNumber>\
+                          <CustomerCode></CustomerCode>\
+                          <RegisterNumber></RegisterNumber>\
+                          <MerchantTransactionId></MerchantTransactionId>\
+                          <CardAcceptorTerminalId></CardAcceptorTerminalId>\
+                          <EnablePartialAuthorization>False</EnablePartialAuthorization>\
+                          <ForceDuplicate>False</ForceDuplicate>\
+                       </Request>\
+                    </Sale>\
+                 </soap:Body>\
+              </soap:Envelope>';
+
+        axios.post(MASTER_MERCHANT_ACCESS["PaymentEndPoint"],
+           xmls,
+           {headers:
+             {'Content-Type': 'text/xml'}
+           }).then(res=>{
+              if( parser.validate(res) === true) { //optional (it'll return an object in case it's not valid)
+                  var jsonObj = parser.parse(res,options);
+              }
+              
+              // Intermediate obj
+              var tObj = parser.getTraversalObj(res,options);
+              var jsonObj = parser.convertToJson(tObj,options);
+              let SaleResponse = jsonObj["soap:Envelope"]["soap:Body"]["SaleResponse"];
+              if(SaleResponse["SaleResult"]["ApprovalStatus"]=="APPROVED"){
+                resolve({"success":true,"body": jsonObj});
+              }else{
+                reject({"success":false,"error":SaleResponse["SaleResult"]["ApprovalStatus"]});
+              }
+
+           }).catch(err=>{
+              reject({"success":false,"error":err});
+          });
+
+    });
   }
 
   makePayment(payloadJson){
@@ -503,4 +336,5 @@ export default class Integrity {
   getPayersTransactions(payloadJson){
     return 'this is test';
   }
+
 }
