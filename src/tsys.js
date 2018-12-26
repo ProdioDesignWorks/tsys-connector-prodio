@@ -122,10 +122,11 @@ export default class TSYS {
 
       if (!isNull(payloadJson["meta"])) {
             payloadJson = payloadJson["meta"];
-        }
+        }else{
         if (!isNull(payloadJson["paymentInfo"])) {
             payloadJson = payloadJson["paymentInfo"];
         }
+      }
         
         //console.log("payloadJson==>"+JSON.stringify(payloadJson));
 
